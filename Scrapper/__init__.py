@@ -6,3 +6,5 @@
 """
 
 from Scrapper.Scrapper import ScrapperDetik as ScrapperDetik
+from Scrapper.Scrapper import ScrapperKompas as ScrapperKompas
+from Scrapper.Scrapper import ScrapperRepublika as ScrapperRepublika
