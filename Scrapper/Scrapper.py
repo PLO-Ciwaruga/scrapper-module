@@ -60,7 +60,7 @@ class Scrapper:
         self.driver.quit()
 
     # Abstract Class that do the scrapping, depends on each website
-    def execute(self, n: int) -> str:
+    def get(self, n: int) -> list:
         pass
 
 
@@ -179,10 +179,23 @@ class ScrapperDetik(Scrapper):
         next_button = self.driver.find_element_by_xpath(
             '/html/body/div[5]/div[2]/div[2]/div/div[2]/a[9]')
 
-        if next_button.is_enabled() and next_button.is_displayed():
-            next_button.click()
+        try:
+            if next_button.is_enabled() and next_button.is_displayed():
+                next_button.click()
 
-    def execute(self, n: int = 100) -> list:
+            else:
+                print("Button is not enabled, trying href instead")
+                print(next_button.get_attribute('href'))
+                self.driver.get(next_button.get_attribute('href'))
+
+        except ElementClickInterceptedException as ECIE:
+            print("Next Page error (element blocked) : ", ECIE)
+            print("Will Try to load href instead")
+            print(next_button.get_attribute('href'))
+
+            self.driver.get(next_button.get_attribute('href'))
+
+    def get(self, n: int = 100) -> list:
         count = 0
         done = False
         # Start with opening up the web
@@ -364,7 +377,7 @@ class ScrapperKompas(Scrapper):
 
             self.driver.get(next_button.get_attribute('href'))
 
-    def execute(self, n: int = 30) -> list:
+    def get(self, n: int = 30) -> list:
         count = 0
         done = False
         # Start with opening up the web
@@ -550,7 +563,7 @@ class ScrapperRepublika(Scrapper):
 
             self.driver.get(next_button.get_attribute('href'))
 
-    def execute(self, n: int = 30) -> list:
+    def get(self, n: int = 30) -> list:
         count = 0
         done = False
         # Start with opening up the web
