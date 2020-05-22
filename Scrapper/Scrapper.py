@@ -26,6 +26,7 @@ class Scrapper:
     url: str
     driver: webdriver.Chrome
     results: list
+    source: str
 
     def __init__(self, url: str, chromeExecPath: str = "", chromeBinPath: str = "", showBrowser: bool = False, timeout: int = 5) -> None:
         # Setting up the Scrapper Driver
@@ -238,7 +239,8 @@ class ScrapperDetik(Scrapper):
                     temp = {
                         'judul': str(article['judul']).strip(),
                         'tanggal': article_detailed['tanggal'],
-                        'isi': article_detailed['body']
+                        'isi': article_detailed['body'],
+                        'sumber' : "Detik"
                     }
 
                     self.results.append(temp)
@@ -430,7 +432,8 @@ class ScrapperKompas(Scrapper):
                     temp = {
                         'judul': str(article['judul']).strip(),
                         'tanggal': article_detailed['tanggal'],
-                        'isi': article_detailed['body']
+                        'isi': article_detailed['body'],
+                        'sumber' : "Kompas"
                     }
 
                     self.results.append(temp)
@@ -501,6 +504,9 @@ class ScrapperRepublika(Scrapper):
 
             for ads in body_wrapper.findAll('div', attrs={'class': 'baca-juga'}):
                 ads.decompose()
+                
+            for bacajuga in body_wrapper.findAll('div', attrs={'class': 'picked-article'}):
+                bacajuga.decompose()
 
             body = body_wrapper.text
             body = re.sub(r'\n+', '\n', body)
@@ -625,7 +631,8 @@ class ScrapperRepublika(Scrapper):
                     temp = {
                         'judul': str(article['judul']).strip(),
                         'tanggal': article_detailed['tanggal'],
-                        'isi': article_detailed['body']
+                        'isi': article_detailed['body'],
+                        'sumber' : "Republika"
                     }
 
                     self.results.append(temp)
