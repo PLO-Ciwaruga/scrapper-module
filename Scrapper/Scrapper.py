@@ -27,7 +27,7 @@ class Scrapper:
     driver: webdriver.Chrome
     results: list
 
-    def __init__(self, url: str, chromeExecPath: str = "", showBrowser: bool = False, timeout: int = 5) -> None:
+    def __init__(self, url: str, chromeExecPath: str = "", chromeBinPath: str = "", showBrowser: bool = False, timeout: int = 5) -> None:
         # Setting up the Scrapper Driver
         driver_options = Options()
         # Show browser based on params
@@ -37,13 +37,20 @@ class Scrapper:
         driver_options.add_argument("no-default-browser-check")
         driver_options.add_argument("no-first-run")
         driver_options.add_argument("no-sandbox")
+        driver_options.add_argument('disable-gpu')
         driver_options.add_argument("disable-extensions")
 
+        if len(chromeBinPath) != 0:
+            # Set binary location if path not empty
+            driver_options.binary_location = chromeBinPath
+
+        print('[INFO] Creating new instance of Chrome webdriver')
         # If the params for path not empty, use the path
         if len(chromeExecPath) != 0:
             self.driver = webdriver.Chrome(
                 executable_path=chromeExecPath, options=driver_options)
         else:
+            print('[INFO] Got no parameter path, using env path instead')
             self.driver = webdriver.Chrome(options=driver_options)
 
         # Class data init
@@ -53,10 +60,12 @@ class Scrapper:
 
     # Convert results class data (list of dict) to raw JSON in string form
     def toLabel(self, url: str) -> str:
+        print("[INFO] Sending scrapping data to %s" % (url))
         return Conn.sendToLabelStudio(self.results, url).status_code
 
     # Class Destructor
     def __del__(self):
+        print('[INFO] Closing webdriver instance')
         self.driver.quit()
 
     # Abstract Class that do the scrapping, depends on each website
@@ -66,8 +75,8 @@ class Scrapper:
 
 class ScrapperDetik(Scrapper):
 
-    def __init__(self, url: str = "http://news.detik.com/indeks", chromeExecPath: str = '', showBrowser: str = False, timeout: int = 5) -> None:
-        super().__init__(url, chromeExecPath=chromeExecPath,
+    def __init__(self, url: str = "http://news.detik.com/indeks", chromeExecPath: str = '', chromeBinPath: str = "", showBrowser: str = False, timeout: int = 5) -> None:
+        super().__init__(url, chromeExecPath=chromeExecPath, chromeBinPath=chromeBinPath,
                          showBrowser=showBrowser, timeout=timeout)
 
     def getBody(self, url: str) -> dict:
@@ -117,14 +126,16 @@ class ScrapperDetik(Scrapper):
 
         except TimeoutException as TE:
             self.driver.close()
-            print("Getting Detail error (timeout), ", TE)
+            print("[ERROR] Detik Scrapper Getting Detail error (timeout), ", TE)
 
         except NoSuchElementException as NSE:
             self.driver.close()
-            print("Getting Detail error (Elements not found), ", NSE)
+            print(
+                "[ERROR] Detik Scrapper Getting Detail error (Elements not found), ", NSE)
 
         except NoSuchWindowException as NSW:
-            print("Getting Detail error (Window already closed), ", NSW)
+            print(
+                "[ERROR] Detik Scrapper Getting Detail error (Window already closed), ", NSW)
 
         finally:
             self.driver.switch_to_window(self.driver.window_handles[0])
@@ -134,7 +145,7 @@ class ScrapperDetik(Scrapper):
     def getArticle(self, page_source) -> dict:
         bs = BS(page_source, 'html.parser')
         articles = bs.findAll('article')
-        print(len(articles))
+        print('[INFO] Got %d number of detik article links' % (len(articles)))
 
         for article in articles:
             item = {}
@@ -160,6 +171,7 @@ class ScrapperDetik(Scrapper):
             yield item
 
     def scrollDown(self) -> None:
+        print('[INFO] Scrolling down to end of site')
         last_height = self.driver.execute_script(
             "return document.body.scrollHeight")
 
@@ -170,7 +182,7 @@ class ScrapperDetik(Scrapper):
             new_height = self.driver.execute_script(
                 "return document.body.scrollHeight")
             if new_height == last_height:
-                print("End of the list")
+                print("[INFO] Found the end of the page")
                 break
 
             last_height = new_height
@@ -181,21 +193,25 @@ class ScrapperDetik(Scrapper):
 
         try:
             if next_button.is_enabled() and next_button.is_displayed():
+                print('[INFO] Going to next page normally')
                 next_button.click()
 
             else:
-                print("Button is not enabled, trying href instead")
-                print(next_button.get_attribute('href'))
+                print("[INFO] Button is not enabled, trying href method instead")
+                print("[INFO] Going to %s for next page" %
+                      (next_button.get_attribute('href')))
                 self.driver.get(next_button.get_attribute('href'))
 
         except ElementClickInterceptedException as ECIE:
-            print("Next Page error (element blocked) : ", ECIE)
-            print("Will Try to load href instead")
-            print(next_button.get_attribute('href'))
+            print("[ERROR] Next Page error (element blocked) : ", ECIE)
+            print("[INFO] Trying href method instead")
+            print("[INFO] Going to %s for next page" %
+                  (next_button.get_attribute('href')))
 
             self.driver.get(next_button.get_attribute('href'))
 
     def get(self, n: int = 100) -> list:
+        print('[INFO] Starting scrap for %d detik news' % (n))
         count = 0
         done = False
         # Start with opening up the web
@@ -238,20 +254,23 @@ class ScrapperDetik(Scrapper):
                 self.nextPage()
 
             except NoSuchElementException as NSE:
-                print("Execute Error (No elemets found), ", NSE)
+                print(
+                    "[ERROR] Detik Scrapper Execute Error (No elemets found), ", NSE)
 
             except KeyError as KE:
-                print("Execute Error (Key error), ", KE)
+                print("[ERROR] Detik Scrapper Execute Error (Key error), ", KE)
 
             except TimeoutException as TE:
-                print("Execute Error (timeout), ", TE)
+                print("[ERROR] Detik Scrapper Execute Error (timeout), ", TE)
 
+        print('[INFO] Scrap done')
         return self.results
+
 
 class ScrapperKompas(Scrapper):
 
-    def __init__(self, url: str = "https://indeks.kompas.com/?site=news", chromeExecPath: str = '', showBrowser: str = False, timeout: int = 5) -> None:
-        super().__init__(url, chromeExecPath=chromeExecPath,
+    def __init__(self, url: str = "https://indeks.kompas.com/?site=news", chromeExecPath: str = '', chromeBinPath: str = '', showBrowser: str = False, timeout: int = 5) -> None:
+        super().__init__(url, chromeExecPath=chromeExecPath, chromeBinPath=chromeBinPath,
                          showBrowser=showBrowser, timeout=timeout)
 
     def getBody(self, url: str) -> dict:
@@ -282,7 +301,7 @@ class ScrapperKompas(Scrapper):
 
             for script in body_wrapper.findAll('span', attrs={'class': 'ads-on-body'}):
                 script.decompose()
-            
+
             body = body_wrapper.text
             body = re.sub(r'\n+', '\n', body)
             tanggal = bs.find('div', attrs={'class': 'read__time'}).text
@@ -296,19 +315,21 @@ class ScrapperKompas(Scrapper):
 
         except TimeoutException as TE:
             self.driver.close()
-            print("Getting Detail error (timeout), ", TE)
+            print("[ERROR] Kompas Scrapper Getting Detail error (timeout), ", TE)
 
         except NoSuchElementException as NSE:
             self.driver.close()
-            print("Getting Detail error (Elements not found), ", NSE)
+            print(
+                "[ERROR] Kompas Scrapper Getting Detail error (Elements not found), ", NSE)
 
         except NoSuchWindowException as NSW:
-            print("Getting Detail error (Window already closed), ", NSW)
+            print(
+                "[ERROR] Kompas Scrapper Getting Detail error (Window already closed), ", NSW)
 
         except Exception as EX:
             self.driver.close()
-            print(EX)
-        
+            print('[ERROR] Kompas Scrapper Exception, ', EX)
+
         self.driver.switch_to_window(self.driver.window_handles[0])
 
         return data
@@ -316,7 +337,7 @@ class ScrapperKompas(Scrapper):
     def getArticle(self, page_source) -> dict:
         bs = BS(page_source, 'html.parser')
         articles = bs.findAll('div', attrs={'article__list clearfix'})
-        print(len(articles))
+        print('[INFO] Got %d number of kompas article links' % (len(articles)))
 
         for article in articles:
             item = {}
@@ -342,6 +363,7 @@ class ScrapperKompas(Scrapper):
             yield item
 
     def scrollDown(self) -> None:
+        print('[INFO] Scrolling down to end of site')
         last_height = self.driver.execute_script(
             "return document.body.scrollHeight")
 
@@ -352,32 +374,36 @@ class ScrapperKompas(Scrapper):
             new_height = self.driver.execute_script(
                 "return document.body.scrollHeight")
             if new_height == last_height:
-                print("End of the list")
+                print("[INFO] Found the end of the page")
                 break
 
             last_height = new_height
 
     def nextPage(self) -> None:
-        next_button = self.driver.find_element_by_xpath("/html/body/div[2]/div[3]/div[1]/div[4]/div/div/div[4]/a")
-        
+        next_button = self.driver.find_element_by_xpath(
+            "/html/body/div[2]/div[3]/div[1]/div[4]/div/div/div[4]/a")
+
         try:
             if next_button.is_enabled() and next_button.is_displayed():
-                print("Next Page")
+                print('[INFO] Going to next page normally')
                 next_button.click()
 
             else:
-                print("Button is not enabled, trying href instead")
-                print(next_button.get_attribute('href'))
+                print("[INFO] Button is not enabled, trying href method instead")
+                print("[INFO] Going to %s for next page" %
+                      (next_button.get_attribute('href')))
                 self.driver.get(next_button.get_attribute('href'))
 
         except ElementClickInterceptedException as ECIE:
-            print("Next Page error (element blocked) : ", ECIE)
-            print("Will Try to load href instead")
-            print(next_button.get_attribute('href'))
+            print("[ERROR] Next Page error (element blocked) : ", ECIE)
+            print("[INFO] Trying href method instead")
+            print("[INFO] Going to %s for next page" %
+                  (next_button.get_attribute('href')))
 
             self.driver.get(next_button.get_attribute('href'))
 
     def get(self, n: int = 30) -> list:
+        print('[INFO] Starting scrap for %d kompas news' % (n))
         count = 0
         done = False
         # Start with opening up the web
@@ -420,20 +446,23 @@ class ScrapperKompas(Scrapper):
                 self.nextPage()
 
             except NoSuchElementException as NSE:
-                print("Execute Error (No elemets found), ", NSE)
+                print(
+                    "[ERROR] Kompas Scrapper Execute Error (No elemets found), ", NSE)
 
             except KeyError as KE:
-                print("Execute Error (Key error), ", KE)
+                print("[ERROR] Kompas Scrapper Execute Error (Key error), ", KE)
 
             except TimeoutException as TE:
-                print("Execute Error (timeout), ", TE)
+                print("[ERROR] Kompas Scrapper Execute Error (timeout), ", TE)
 
+        print('[INFO] Scrap done')
         return self.results
+
 
 class ScrapperRepublika(Scrapper):
 
-    def __init__(self, url: str = "https://republika.co.id/index/news/", chromeExecPath: str = '', showBrowser: str = False, timeout: int = 5) -> None:
-        super().__init__(url, chromeExecPath=chromeExecPath,
+    def __init__(self, url: str = "https://republika.co.id/index/news/", chromeExecPath: str = '', chromeBinPath: str = '', showBrowser: str = False, timeout: int = 5) -> None:
+        super().__init__(url, chromeExecPath=chromeExecPath, chromeBinPath=chromeBinPath,
                          showBrowser=showBrowser, timeout=timeout)
 
     def getBody(self, url: str) -> dict:
@@ -460,7 +489,7 @@ class ScrapperRepublika(Scrapper):
             # Deleting ANNOYING link in middle of the body
             for text in body_wrapper.findAll('div', attrs={'class': 'taiching'}):
                 text.decompose()
-            
+
             for script in body_wrapper.findAll('script'):
                 script.decompose()
 
@@ -486,14 +515,16 @@ class ScrapperRepublika(Scrapper):
 
         except TimeoutException as TE:
             self.driver.close()
-            print("Getting Detail error (timeout), ", TE)
+            print("[ERROR] Republika Scrapper Getting Detail error (timeout), ", TE)
 
         except NoSuchElementException as NSE:
             self.driver.close()
-            print("Getting Detail error (Elements not found), ", NSE)
+            print(
+                "[ERROR] Republika Scrapper Getting Detail error (Elements not found), ", NSE)
 
         except NoSuchWindowException as NSW:
-            print("Getting Detail error (Window already closed), ", NSW)
+            print(
+                "[ERROR] Republika Scrapper Getting Detail error (Window already closed), ", NSW)
 
         finally:
             self.driver.switch_to_window(self.driver.window_handles[0])
@@ -503,7 +534,7 @@ class ScrapperRepublika(Scrapper):
     def getArticle(self, page_source) -> dict:
         bs = BS(page_source, 'html.parser')
         articles = bs.findAll('div', attrs={'set_subkanal'})
-        print(len(articles))
+        print('[INFO] Got %d number of republika article links' % (len(articles)))
 
         for article in articles:
             item = {}
@@ -528,6 +559,7 @@ class ScrapperRepublika(Scrapper):
             yield item
 
     def scrollDown(self) -> None:
+        print('[INFO] Scrolling down to end of site')
         last_height = self.driver.execute_script(
             "return document.body.scrollHeight")
 
@@ -538,32 +570,35 @@ class ScrapperRepublika(Scrapper):
             new_height = self.driver.execute_script(
                 "return document.body.scrollHeight")
             if new_height == last_height:
-                print("End of the list")
+                print("[INFO] Found the end of the page")
                 break
 
             last_height = new_height
 
     def nextPage(self) -> None:
         next_button = self.driver.find_element_by_class_name("pagination")
-        
+
         try:
             if next_button.is_enabled() and next_button.is_displayed():
-                print("Next Page")
+                print('[INFO] Going to next page normally')
                 next_button.click()
 
             else:
-                print("Button is not enabled, trying href instead")
-                print(next_button.get_attribute('href'))
+                print("[INFO] Button is not enabled, trying href method instead")
+                print("[INFO] Going to %s for next page" %
+                      (next_button.get_attribute('href')))
                 self.driver.get(next_button.get_attribute('href'))
 
         except ElementClickInterceptedException as ECIE:
-            print("Next Page error (element blocked) : ", ECIE)
-            print("Will Try to load href instead")
-            print(next_button.get_attribute('href'))
+            print("[ERROR] Next Page error (element blocked) : ", ECIE)
+            print("[INFO] Trying href method instead")
+            print("[INFO] Going to %s for next page" %
+                  (next_button.get_attribute('href')))
 
             self.driver.get(next_button.get_attribute('href'))
 
     def get(self, n: int = 30) -> list:
+        print('[INFO] Starting scrap for %d republika news' % (n))
         count = 0
         done = False
         # Start with opening up the web
@@ -606,12 +641,14 @@ class ScrapperRepublika(Scrapper):
                 self.nextPage()
 
             except NoSuchElementException as NSE:
-                print("Execute Error (No elemets found), ", NSE)
+                print(
+                    "[ERROR] Republika Scrapper Execute Error (No elemets found), ", NSE)
 
             except KeyError as KE:
-                print("Execute Error (Key error), ", KE)
+                print("[ERROR] Republika Scrapper Execute Error (Key error), ", KE)
 
             except TimeoutException as TE:
-                print("Execute Error (timeout), ", TE)
+                print("[ERROR] Republika Scrapper Execute Error (timeout), ", TE)
 
+        print('[INFO] Scrap done')
         return self.results
