@@ -6,14 +6,33 @@
 """
 
 from flask import Flask, request
+from flask_httpauth import HTTPBasicAuth
 from Scrapper import ScrapperDetik, ScrapperKompas, ScrapperRepublika
 from Scrapper import ScrapperWrapper
+from Auth import Auth
 from Params import Params
+
+# Creating Flask instance
 app = Flask(__name__)
+httpAuth = HTTPBasicAuth()
 
 # Getting params for the app
 params = Params()
 params.getEnvSettings()
+
+# Creating Auth instance
+auth = Auth()
+
+
+@httpAuth.verify_password
+def verify_password(username, password):
+    if auth.auth(username, password):
+        return username
+
+
+@httpAuth.get_user_roles
+def get_user_roles(user):
+    return auth.getRole(user)
 
 
 @app.route('/')
@@ -22,6 +41,7 @@ def home():
 
 
 @app.route('/update')
+@httpAuth.login_required(role=['user', 'admin'])
 def updateQuery():
     try:
         # Getting arguments for each site
@@ -84,6 +104,7 @@ def updateQuery():
 
 
 @app.route('/set/<paramType>', methods=['POST'])
+@httpAuth.login_required(role='admin')
 def setParams(paramType):
     if paramType == 'labelurl':
         url = request.form.get('url')
@@ -92,6 +113,26 @@ def setParams(paramType):
         if url != None or len(url) == 0:
             params.label_studio_url = url
             params.update()
+
+            return "Success", 200
+
+        else:
+            return "Error", 400
+
+    else:
+        return "Error", 400
+
+
+@app.route('/add/<paramType>', methods=['POST'])
+@httpAuth.login_required(role='admin')
+def addParams(paramType):
+    if paramType == 'user':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        role = request.form.get('role')
+
+        if username != None and password != None and role != None:
+            auth.newUser(username, password, role)
 
             return "Success", 200
 
