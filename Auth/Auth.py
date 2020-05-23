@@ -8,17 +8,7 @@
 import json
 import bcrypt
 from typing import List
-
-
-class User:
-    username: str
-    role: str
-    pass_hash: str
-
-    def __init__(self, username: str, role: str, pass_hash: str) -> None:
-        self.username = username
-        self.role = role
-        self.pass_hash = pass_hash
+from Auth import User
 
 
 class Auth:
@@ -109,9 +99,16 @@ class Auth:
             json.dump(self.rawDict, dest_file)
 
     def newUser(self, username, password, role):
-        tempUsr = User(username, role, self.__saltAndHash(password))
+        pass_hash, usr_role = self.__search(username)
 
-        self.__add(tempUsr)
+        if pass_hash == None and usr_role == None:
+            tempUsr = User(username, role, self.__saltAndHash(password))
+
+            self.__add(tempUsr)
+
+            return True
+        else:
+            return False
 
     def isEmpty(self):
         if len(self.users) == 0:

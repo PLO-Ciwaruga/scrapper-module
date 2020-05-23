@@ -16,6 +16,8 @@ class Params:
     label_studio_url: str
     chrome_driver_path: str
     chrome_bin_path: str
+    temp_dir: str
+    result_dir: str
 
     def __init__(self, path: str = 'params.json') -> None:
         print('[INFO] Loading parameters from file')
@@ -30,6 +32,8 @@ class Params:
             self.label_studio_url = rawDict['labelStudioURL']
             self.chrome_driver_path = rawDict['chromeWebDriverPath']
             self.chrome_bin_path = rawDict['chromeBinPath']
+            self.temp_dir = rawDict['tempDir']
+            self.result_dir = rawDict['resDir']
 
         except json.JSONDecodeError as JDE:
             print('[ERROR] Params file opening error ', JDE)
@@ -39,9 +43,11 @@ class Params:
                 "nKompas": 10,
                 "nDetik": 10,
                 "nRepublika": 10,
-                "labelStudioURL": 10,
+                "labelStudioURL": "",
                 "chromeWebDriverPath": "",
-                "chromeBinPath": ""
+                "chromeBinPath": "",
+                "tempDir": os.getcwd() + "/tmp",
+                "resDir": os.getcwd() + "/res"
             }
 
             with open(path, 'w') as dest_file:
@@ -60,7 +66,9 @@ class Params:
             "nRepublika": self.n_republika,
             "labelStudioURL": self.label_studio_url,
             "chromeWebDriverPath": self.chrome_driver_path,
-            "chromeBinPath": self.chrome_bin_path
+            "chromeBinPath": self.chrome_bin_path,
+            "tempDir": self.temp_dir,
+            "resDir": self.result_dir
         }
 
         with open(self.path, 'w') as dest_file:
@@ -71,8 +79,10 @@ class Params:
         temp_driver_path = os.getenv('GOOGLE_CHROME_BIN')
         temp_bin_path = os.getenv('CHROMEDRIVER_PATH')
 
-        if temp_bin_path and temp_driver_path:
+        if temp_bin_path != None and temp_driver_path != None:
             self.chrome_bin_path = temp_bin_path
             self.chrome_driver_path = temp_driver_path
+
+            self.update()
         else:
             print('[INFO] No ENV settings found, using params file instead')

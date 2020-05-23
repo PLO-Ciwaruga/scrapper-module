@@ -5,5 +5,5 @@
     22/05/2020
 """
 
-from Auth.Auth import User as User
+from Auth.User import User as User
 from Auth.Auth import Auth as Auth
