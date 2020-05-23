@@ -5,7 +5,7 @@
     20/04/2020
 """
 
-import Scrapper.Connector as Conn
+import Connector.Sender as Conn
 
 import json
 import re

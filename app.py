@@ -5,12 +5,17 @@
     20/04/2020
 """
 
+import os
+import json
 from flask import Flask, request
+from flask import jsonify
 from flask_httpauth import HTTPBasicAuth
+
 from Scrapper import ScrapperDetik, ScrapperKompas, ScrapperRepublika
 from Scrapper import ScrapperWrapper
 from Auth import Auth
 from Params import Params
+from Connector.Receiver import Receiver
 
 # Creating Flask instance
 app = Flask(__name__)
@@ -132,9 +137,12 @@ def addParams(paramType):
         role = request.form.get('role')
 
         if username != None and password != None and role != None:
-            auth.newUser(username, password, role)
+            tempStatus = auth.newUser(username, password, role)
 
-            return "Success", 200
+            if tempStatus:
+                return "Success", 200
+            else:
+                return "Error", 400
 
         else:
             return "Error", 400
@@ -142,6 +150,37 @@ def addParams(paramType):
     else:
         return "Error", 400
 
+
+@app.route('/get/<paramType>', methods=['POST'])
+@httpAuth.login_required(role=['user', 'admin'])
+def getParams(paramType):
+    if paramType == 'list':
+        resultList = os.listdir(params.result_dir)
+
+        return jsonify(resultList)
+
+    elif paramType == 'content':
+        filename = request.form.get('filename')
+        fullDir = params.result_dir + '/' + filename
+
+        try:
+            with open(fullDir, 'r') as source_file:
+                rawDict = json.load(source_file)
+
+            return jsonify(rawDict)
+
+        except FileNotFoundError as FNFE:
+            print('[ERROR] No such file ', FNFE)
+
+            return 'Not Found', 404
+
+    elif paramType == 'update':
+        receiver = Receiver(params.label_studio_url, params.temp_dir)
+        savedFileDir = receiver.saveFile(params.result_dir)
+
+        return jsonify(filename=savedFileDir.split('/')[-1])
+
+    return "Error", 400
 
 if __name__ == "__main__":
     app.run(debug=True)
