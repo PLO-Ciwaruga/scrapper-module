@@ -56,7 +56,8 @@ class Auth:
         if self.isEmpty():
             return True
 
-        pass_hash, usr_role = self.__search(username)
+        pass_hash = self.__search(username)
+        pass_hash = pass_hash[0]
 
         if pass_hash == None:
             return False
@@ -76,7 +77,8 @@ class Auth:
     def getRole(self, username):
         if self.isEmpty():
             return 'admin'
-        pass_hash, usr_role = self.__search(username)
+        usr_role = self.__search(username)
+        usr_role = usr_role[1]
 
         return usr_role
 
