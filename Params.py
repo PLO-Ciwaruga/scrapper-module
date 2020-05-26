@@ -78,6 +78,8 @@ class Params:
         print('[INFO] Getting ENV settings')
         temp_driver_path = os.getenv('GOOGLE_CHROME_BIN')
         temp_bin_path = os.getenv('CHROMEDRIVER_PATH')
+        temp_temp_path = os.getenv('TEMP_PATH')
+        temp_result_path = os.getenv('RESULT_PATH')
 
         if temp_bin_path != None and temp_driver_path != None:
             self.chrome_bin_path = temp_bin_path
@@ -85,4 +87,18 @@ class Params:
 
             self.update()
         else:
-            print('[INFO] No ENV settings found, using params file instead')
+            print('[INFO] No ENV settings found for chromedriver, using params file instead')
+
+        if temp_temp_path != None:
+            self.temp_dir = temp_temp_path
+
+            self.update()
+        else:
+            print('[INFO] No ENV settings found for temp directory, using params file instead')
+
+        if temp_result_path != None:
+            self.result_dir = temp_result_path
+
+            self.update()
+        else:
+            print('[INFO] No ENV settings found for result directory, using params file instead')

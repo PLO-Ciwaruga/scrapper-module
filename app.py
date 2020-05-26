@@ -212,8 +212,13 @@ def addParams(paramType):
         password = request.form.get('password')
         role = request.form.get('role')
 
-        # Checking for empty request into the system
-        if username != None and password != None and role != None:
+        # Checking for non valid request into the system
+        valid = len(username) != 0 and \
+            len(password) != 0 and \
+            (role != 'user' or \
+                role != 'admin')
+
+        if valid:
             tempStatus = auth.newUser(username, password, role)
 
             # If the newUser method returns False, it meant the addition
@@ -221,7 +226,7 @@ def addParams(paramType):
             if tempStatus:
                 return "Success", 200
             else:
-                return "Error", 400
+                return "Duplicate", 400
 
         else:
             return "Error", 400
